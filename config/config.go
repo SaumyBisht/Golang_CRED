@@ -11,7 +11,7 @@ import (
 
 var MongoClient *mongo.Client
 
-const DB_URL string = ""
+const DB_URL string = "mongodb+srv://shantanubose_db_user:S92rdJWvGn50Dqoc@cluster0.mcfuxtt.mongodb.net/?appName=Cluster0"
 
 func ConnectDB() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
