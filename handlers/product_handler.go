@@ -2,51 +2,67 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"products/config"
 	"products/models"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-func CreateProduct(c echo.Context) error {
-	product := new(models.Product)
-	if err := c.Bind(product); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
-			"error": "invalid request body",
-			"msg":   err.Error(),
-		})
-	}
+// GetAllProducts retrieves all products from the database
+func GetAllProducts(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
 	collection := config.GetCollection("products")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := collection.InsertOne(ctx, product)
+	cursor, err := collection.Find(ctx, bson.M{})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "failed to insert product",
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to fetch products",
 			"msg":   err.Error(),
 		})
+		return
+	}
+	defer cursor.Close(ctx)
+
+	var products []models.Product
+	if err := cursor.All(ctx, &products); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to decode products",
+			"msg":   err.Error(),
+		})
+		return
 	}
 
-	return c.JSON(http.StatusCreated, echo.Map{
-		"message": "product created successfully",
-		"data":    result,
-	})
+	if products == nil {
+		products = []models.Product{}
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(products)
 }
 
-func GetProduct(c echo.Context) error {
-	id := c.Param("id")
+// GetProductByID retrieves a single product by ID
+func GetProductByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
 
-	objID, err := primitive.ObjectIDFromHex(id)
+	params := mux.Vars(r)
+	id := params["id"]
+
+	objID, err := bson.ObjectIDFromHex(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": "invalid product ID format",
 		})
+		return
 	}
 
 	collection := config.GetCollection("products")
@@ -56,11 +72,93 @@ func GetProduct(c echo.Context) error {
 	var product models.Product
 	err = collection.FindOne(ctx, bson.M{"_id": objID}).Decode(&product)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, echo.Map{
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
 			"error": "product not found",
 			"msg":   err.Error(),
 		})
+		return
 	}
 
-	return c.JSON(http.StatusOK, product)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(product)
+}
+
+// CreateProduct creates a new product
+func CreateProduct(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var product models.Product
+	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "invalid request body",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	collection := config.GetCollection("products")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := collection.InsertOne(ctx, product)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to insert product",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "product created successfully",
+		"data":    result,
+	})
+}
+
+// DeleteProduct deletes a product by ID
+func DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	id := params["id"]
+
+	objID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "invalid product ID format",
+		})
+		return
+	}
+
+	collection := config.GetCollection("products")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	result, err := collection.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to delete product",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	if result.DeletedCount == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "product not found",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message": "product deleted successfully",
+	})
 }
