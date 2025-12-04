@@ -2,10 +2,10 @@
 package main
 
 import (
+	"core-service/config"
+	"core-service/handlers"
 	"log"
 	"net/http"
-	"products/config"
-	"products/handlers"
 
 	"github.com/gorilla/mux"
 )

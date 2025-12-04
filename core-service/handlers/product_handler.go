@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
+	"core-service/config"
+	"core-service/models"
 	"encoding/json"
 	"net/http"
-	"products/config"
-	"products/models"
 	"time"
 
 	"github.com/gorilla/mux"
