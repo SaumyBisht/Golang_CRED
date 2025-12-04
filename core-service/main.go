@@ -19,8 +19,9 @@ func main() {
 
 	// Routes
 	r.HandleFunc("/products", handlers.GetAllProducts).Methods("GET")
-	r.HandleFunc("/products/{id}", handlers.GetProductByID).Methods("GET")
+	r.HandleFunc("/products/{id}", handlers.GetProductByID).Methods("GET") // particular product
 	r.HandleFunc("/products", handlers.CreateProduct).Methods("POST")
+	r.HandleFunc("/products/{id}", handlers.UpdateProduct).Methods("PUT")
 	r.HandleFunc("/products/{id}", handlers.DeleteProduct).Methods("DELETE")
 
 	// Start server
