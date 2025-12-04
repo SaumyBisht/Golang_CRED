@@ -2,10 +2,10 @@
 package main
 
 import (
+	"core-service/config"
+	"core-service/handlers"
 	"log"
 	"net/http"
-	"products/config"
-	"products/handlers"
 
 	"github.com/gorilla/mux"
 )
@@ -23,6 +23,15 @@ func main() {
 	r.HandleFunc("/products", handlers.CreateProduct).Methods("POST")
 	r.HandleFunc("/products/{id}", handlers.UpdateProduct).Methods("PUT")
 	r.HandleFunc("/products/{id}", handlers.DeleteProduct).Methods("DELETE")
+
+	// tenant routes
+	r.HandleFunc("/tenants", handlers.CreateTenant).Methods("POST")
+	r.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
+	r.HandleFunc("/tenants/{id}", handlers.GetTenantByID).Methods("GET")
+
+	// project routes
+	r.HandleFunc("/tenants/{tenantId}/projects", handlers.CreateProject).Methods("POST")
+	r.HandleFunc("/tenants/{tenantId}/projects", handlers.GetAllProjectsByTenantID).Methods("GET")
 
 	// Start server
 	log.Println("Server starting on :8081")
