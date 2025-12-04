@@ -119,6 +119,68 @@ func CreateProduct(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// UpdateProduct updates an existing product by ID
+func UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	id := params["id"]
+
+	objID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "invalid product ID format",
+		})
+		return
+	}
+
+	// Decode request body
+	var updatedProduct models.Product
+	if err := json.NewDecoder(r.Body).Decode(&updatedProduct); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "invalid request body",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	collection := config.GetCollection("products")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// MongoDB update statement
+	update := bson.M{
+		"$set": updatedProduct,
+	}
+
+	result, err := collection.UpdateOne(ctx, bson.M{"_id": objID}, update)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to update product",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	if result.MatchedCount == 0 {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "product not found",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"message":  "product updated successfully",
+		"matched":  result.MatchedCount,
+		"modified": result.ModifiedCount,
+	})
+}
+
 // DeleteProduct deletes a product by ID
 func DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
