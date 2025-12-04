@@ -29,6 +29,10 @@ func main() {
 	r.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
 	r.HandleFunc("/tenants/{id}", handlers.GetTenantByID).Methods("GET")
 
+	// project routes
+	r.HandleFunc("/tenants/{tenantId}/projects", handlers.CreateProject).Methods("POST")
+	r.HandleFunc("/tenants/{tenantId}/projects", handlers.GetAllProjectsByTenantID).Methods("GET")
+
 	// Start server
 	log.Println("Server starting on :8081")
 	log.Fatal(http.ListenAndServe(":8081", r))
