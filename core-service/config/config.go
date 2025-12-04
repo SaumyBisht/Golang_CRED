@@ -40,5 +40,5 @@ func GetCollection(collectionName string) *mongo.Collection {
 	if collectionName == "" {
 		log.Fatal("Collection name cannot be empty")
 	}
-	return MongoClient.Database("productdb").Collection(collectionName)
+	return MongoClient.Database("core_db").Collection(collectionName)
 }

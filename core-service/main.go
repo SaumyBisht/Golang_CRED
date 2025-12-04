@@ -24,6 +24,11 @@ func main() {
 	r.HandleFunc("/products/{id}", handlers.UpdateProduct).Methods("PUT")
 	r.HandleFunc("/products/{id}", handlers.DeleteProduct).Methods("DELETE")
 
+	// tenant routes
+	r.HandleFunc("/tenants", handlers.CreateTenant).Methods("POST")
+	r.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
+	r.HandleFunc("/tenants/{id}", handlers.GetTenantByID).Methods("GET")
+
 	// Start server
 	log.Println("Server starting on :8081")
 	log.Fatal(http.ListenAndServe(":8081", r))
