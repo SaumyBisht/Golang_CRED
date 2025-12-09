@@ -12,7 +12,9 @@ import (
 )
 
 var MongoClient *mongo.Client
+var CoreServiceURL string
 var JWTSecret []byte
+var ServiceName string = "deployment-service"
 
 const DB_URL string = "mongodb+srv://shantanubose_db_user:S92rdJWvGn50Dqoc@cluster0.mcfuxtt.mongodb.net/?appName=Cluster0"
 
@@ -22,12 +24,18 @@ func init() {
 		log.Println("No .env file found, using environment variables")
 	}
 
+	CoreServiceURL = os.Getenv("CORE_SERVICE_URL")
+	if CoreServiceURL == "" {
+		CoreServiceURL = "http://localhost:8081"
+	}
+	log.Printf("Core Service URL: %s", CoreServiceURL)
+
 	secretEnv := os.Getenv("JWT_SECRET")
 	if secretEnv != "" {
 		JWTSecret = []byte(secretEnv)
-		log.Println("✓ JWT secret loaded from environment")
+		log.Println("JWT secret loaded from environment")
 	} else {
-		log.Fatal("⚠️ JWT_SECRET environment variable is required")
+		log.Fatal("JWT_SECRET environment variable is required for deployment service")
 	}
 }
 
@@ -58,5 +66,5 @@ func GetCollection(collectionName string) *mongo.Collection {
 	if collectionName == "" {
 		log.Fatal("Collection name cannot be empty")
 	}
-	return MongoClient.Database("core_db").Collection(collectionName)
+	return MongoClient.Database("deployment_db").Collection(collectionName)
 }

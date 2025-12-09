@@ -1,9 +1,9 @@
-// main.go
 package main
 
 import (
 	"core-service/config"
 	"core-service/handlers"
+	"core-service/middleware"
 	"log"
 	"net/http"
 
@@ -17,18 +17,20 @@ func main() {
 	// Create router
 	r := mux.NewRouter()
 
-	// tenant routes
-	r.HandleFunc("/tenants", handlers.CreateTenant).Methods("POST")
-	r.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
-	r.HandleFunc("/tenants/{id}", handlers.GetTenantByID).Methods("GET")
+	// Public routes (no authentication required)
+	publicRouter := r.PathPrefix("").Subrouter()
+	publicRouter.HandleFunc("/tenants", handlers.CreateTenant).Methods("POST")
+	publicRouter.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
+	publicRouter.HandleFunc("/tenants/{id}", handlers.GetTenantByID).Methods("GET")
+	publicRouter.HandleFunc("/tenants/{tenantId}/projects", handlers.CreateProject).Methods("POST")
+	publicRouter.HandleFunc("/tenants/{tenantId}/projects", handlers.GetAllProjectsByTenantID).Methods("GET")
+	publicRouter.HandleFunc("/projects/{projectId}/services", handlers.GetAllServicesByProjectID).Methods("GET")
+	publicRouter.HandleFunc("/projects/{projectId}/services", handlers.CreateService).Methods("POST")
 
-	// project routes
-	r.HandleFunc("/tenants/{tenantId}/projects", handlers.CreateProject).Methods("POST")
-	r.HandleFunc("/tenants/{tenantId}/projects", handlers.GetAllProjectsByTenantID).Methods("GET")
-
-	//service routes
-	r.HandleFunc("/projects/{projectId}/services", handlers.GetAllServicesByProjectID).Methods("GET")
-	r.HandleFunc("/projects/{projectId}/services", handlers.CreateService).Methods("POST")
+	// Internal routes (require API key authentication)
+	internalRouter := r.PathPrefix("").Subrouter()
+	internalRouter.Use(middleware.AuthMiddleware)
+	internalRouter.HandleFunc("/services/{id}", handlers.GetServiceByID).Methods("GET")
 
 	// Start server
 	log.Println("Server starting on :8081")

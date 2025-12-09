@@ -115,3 +115,38 @@ func GetAllServicesByProjectID(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(services)
 }
+
+func GetServiceByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	serviceID := params["id"]
+
+	serviceObjectID, err := bson.ObjectIDFromHex(serviceID)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "invalid service ID format",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	collection := config.GetCollection("services")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var service models.Service
+	err = collection.FindOne(ctx, bson.M{"_id": serviceObjectID}).Decode(&service)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "service not found",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(service)
+}
