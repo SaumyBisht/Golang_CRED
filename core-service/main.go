@@ -17,13 +17,6 @@ func main() {
 	// Create router
 	r := mux.NewRouter()
 
-	// Routes
-	r.HandleFunc("/products", handlers.GetAllProducts).Methods("GET")
-	r.HandleFunc("/products/{id}", handlers.GetProductByID).Methods("GET") // particular product
-	r.HandleFunc("/products", handlers.CreateProduct).Methods("POST")
-	r.HandleFunc("/products/{id}", handlers.UpdateProduct).Methods("PUT")
-	r.HandleFunc("/products/{id}", handlers.DeleteProduct).Methods("DELETE")
-
 	// tenant routes
 	r.HandleFunc("/tenants", handlers.CreateTenant).Methods("POST")
 	r.HandleFunc("/tenants", handlers.GetAllTenants).Methods("GET")
@@ -32,6 +25,10 @@ func main() {
 	// project routes
 	r.HandleFunc("/tenants/{tenantId}/projects", handlers.CreateProject).Methods("POST")
 	r.HandleFunc("/tenants/{tenantId}/projects", handlers.GetAllProjectsByTenantID).Methods("GET")
+
+	//service routes
+	r.HandleFunc("/projects/{projectId}/services", handlers.GetAllServicesByProjectID).Methods("GET")
+	r.HandleFunc("/projects/{projectId}/services", handlers.CreateService).Methods("POST")
 
 	// Start server
 	log.Println("Server starting on :8081")
