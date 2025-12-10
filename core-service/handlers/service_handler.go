@@ -6,10 +6,12 @@ import (
 	"core-service/models"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
 func CreateService(w http.ResponseWriter, r *http.Request) {
@@ -73,6 +75,19 @@ func GetAllServicesByProjectID(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	projectID := params["projectId"]
 
+	// Parse pagination parameters
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10 // Default limit
+	}
+
+	skip := (page - 1) * limit
+
 	collection := config.GetCollection("services")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -87,7 +102,23 @@ func GetAllServicesByProjectID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cursor, err := collection.Find(ctx, bson.M{"project_id": projectIdBson})
+	filter := bson.M{"project_id": projectIdBson}
+
+	totalCount, err := collection.CountDocuments(ctx, filter)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "failed to count services",
+			"msg":   err.Error(),
+		})
+		return
+	}
+
+	findOptions := options.Find()
+	findOptions.SetSkip(int64(skip))
+	findOptions.SetLimit(int64(limit))
+
+	cursor, err := collection.Find(ctx, filter, findOptions)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]interface{}{
@@ -112,8 +143,16 @@ func GetAllServicesByProjectID(w http.ResponseWriter, r *http.Request) {
 		services = []models.Service{}
 	}
 
+	totalPages := (int(totalCount) + limit - 1) / limit
+
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(services)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data":        services,
+		"page":        page,
+		"limit":       limit,
+		"total_count": totalCount,
+		"total_pages": totalPages,
+	})
 }
 
 func GetServiceByID(w http.ResponseWriter, r *http.Request) {
