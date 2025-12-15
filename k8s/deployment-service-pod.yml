@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deployment-service
+  template:
+    metadata:
+      labels:
+        app: deployment-service
+    spec:
+      containers:
+      - name: deploy-app
+        image: deployment-service:v1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8082
+        env:
+        - name: CORE_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CORE_SERVICE_URL
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: JWT_SECRET
+        livenessProbe:
+          tcpSocket:
+            port: 8082
+          initialDelaySeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 8082
+          initialDelaySeconds: 5
